@@ -126,6 +126,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 //Global Variables
 const int cellsize = 100;
+HBRUSH bluebr, redbr;
+int playerturn = 1;
 
 BOOL GetGameboardRect(HWND hwnd, RECT *prect)	//function for obtaining coordinates for centering rectangle
 {
@@ -153,7 +155,6 @@ void DrawLine(HDC hdc, int x1, int y1, int x2, int y2)		//function to draw line 
 int GetCellNumFromPoint(HWND hwnd, int x, int y)
 {
 	RECT rc;
-	int count = 1;
 	if (GetGameboardRect(hwnd, &rc))
 	{
 		POINT	pt = { x,y };		//same as pt.x=x and pt.y=y
@@ -173,14 +174,41 @@ int GetCellNumFromPoint(HWND hwnd, int x, int y)
 		}
 	}
 	SetRectEmpty(&rc);
-	//ptinrect
-	
 }
+
+BOOL GetCellCoord(HWND hwnd, int index, RECT *cell)		//obtain coordinates for the clicked cell
+{
+	RECT rc;
+	SetRectEmpty(cell);
+	if (index < 0 || index > 8)
+	{
+		return FALSE;
+	}
+	if (GetGameboardRect(hwnd, &rc))
+	{
+		int x = index % 3;	//col
+		int y = index / 3;	//row
+		cell->left = rc.left + cellsize*x + 1;
+		cell->top = rc.top + cellsize*y + 1;
+		cell->right = cell->left + cellsize - 1;
+		cell->bottom = cell->top + cellsize - 1;
+		return TRUE;
+	}
+	return FALSE;
+}
+
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+	case WM_CREATE:
+	{
+		bluebr = CreateSolidBrush(RGB(0, 0, 255));
+		redbr = CreateSolidBrush(RGB(255, 0, 0));
+	}
+	break;
+
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
@@ -212,12 +240,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		HDC	hdc = GetDC(hWnd);
 		if (NULL != hdc) 
 		{
-			WCHAR txt[100];		//must define in wchar because textout will take in tchar format
-			wsprintf(txt, L"Index = %d", index);
-			TextOut(hdc, xPos, yPos, txt, lstrlen(txt));
+			//WCHAR txt[100];		//must define in wchar because textout will take in tchar format
+			//wsprintf(txt, L"Index = %d", index);
+			//TextOut(hdc, xPos, yPos, txt, lstrlen(txt));
+			
+			//coloring clicked cell
+			RECT cell;
+			if (GetCellCoord(hWnd, index, &cell))
+			{
+				FillRect(hdc, &cell, (playerturn == 1) ? bluebr : redbr);
+				playerturn = (playerturn == 1) ? 2 : 1;
+			}
+
 			ReleaseDC(hWnd, hdc);
 		}
 
+		
 	}
 	break;
 
@@ -246,6 +284,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_DESTROY:
+		DeleteObject(bluebr);
+		DeleteObject(redbr);
         PostQuitMessage(0);
         break;
     default:
