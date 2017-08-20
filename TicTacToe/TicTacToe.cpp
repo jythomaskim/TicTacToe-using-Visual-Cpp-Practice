@@ -126,8 +126,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 //Global Variables
 const int cellsize = 100;
-HBRUSH bluebr, redbr;
+HBRUSH bluebr1, redbr2;
 int playerturn = 1;
+int gameboard[9] = {};
 
 BOOL GetGameboardRect(HWND hwnd, RECT *prect)	//function for obtaining coordinates for centering rectangle
 {
@@ -204,8 +205,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
 	case WM_CREATE:
 	{
-		bluebr = CreateSolidBrush(RGB(0, 0, 255));
-		redbr = CreateSolidBrush(RGB(255, 0, 0));
+		bluebr1 = CreateSolidBrush(RGB(0, 0, 255));
+		redbr2 = CreateSolidBrush(RGB(255, 0, 0));
 	}
 	break;
 
@@ -245,11 +246,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			//TextOut(hdc, xPos, yPos, txt, lstrlen(txt));
 			
 			//coloring clicked cell
-			RECT cell;
-			if (GetCellCoord(hWnd, index, &cell))
+			if (-1 != index)
 			{
-				FillRect(hdc, &cell, (playerturn == 1) ? bluebr : redbr);
-				playerturn = (playerturn == 1) ? 2 : 1;
+				RECT cell;
+				if (0==gameboard[index] && GetCellCoord(hWnd, index, &cell))
+				{
+					gameboard[index] = playerturn;
+					FillRect(hdc, &cell, (playerturn == 1) ? bluebr1 : redbr2);
+					playerturn = (playerturn == 1) ? 2 : 1;
+				}
 			}
 
 			ReleaseDC(hWnd, hdc);
@@ -278,14 +283,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				//horizontal
 				DrawLine(hdc, rc.left, rc.top+cellsize*i, rc.right, rc.top+cellsize*i);
 			}
-
+			RECT cell;
+			for (int i = 0; i < 9; i++)
+			{
+				if (0 != gameboard[i] && GetCellCoord(hWnd, i, &cell))
+				{
+					FillRect(hdc, &cell, (gameboard[i]==1) ? bluebr1 : redbr2);
+				}
+			}
 			
 			EndPaint(hWnd, &ps);
         }
         break;
     case WM_DESTROY:
-		DeleteObject(bluebr);
-		DeleteObject(redbr);
+		DeleteObject(bluebr1);
+		DeleteObject(redbr2);
         PostQuitMessage(0);
         break;
     default:
