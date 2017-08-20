@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "TicTacToe.h"
+#include "Windowsx.h"
 
 #define MAX_LOADSTRING 100
 
@@ -126,6 +127,55 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //Global Variables
 const int cellsize = 100;
 
+BOOL GetGameboardRect(HWND hwnd, RECT *prect)	//function for obtaining coordinates for centering rectangle
+{
+	RECT	rc;
+	if (GetClientRect(hwnd, &rc))		//obtains the client window size (top left is zero, bottom and right is width/length)
+	{
+		int width = rc.right - rc.left;
+		int length = rc.bottom - rc.top;
+		prect->left = (width - cellsize * 3) / 2;
+		prect->top = (length - cellsize * 3) / 2;
+		prect->right = prect->left + cellsize * 3;
+		prect->bottom = prect->top + cellsize * 3;
+		return TRUE;
+	}
+	SetRectEmpty(prect);
+	return FALSE; 
+}
+
+void DrawLine(HDC hdc, int x1, int y1, int x2, int y2)		//function to draw line from one coordinate to another
+{
+	MoveToEx(hdc, x1, y1, NULL);
+	LineTo(hdc, x2, y2);
+}
+
+int GetCellNumFromPoint(HWND hwnd, int x, int y)
+{
+	RECT rc;
+	int count = 1;
+	if (GetGameboardRect(hwnd, &rc))
+	{
+		POINT	pt = { x,y };		//same as pt.x=x and pt.y=y
+		if (PtInRect(&rc, pt))	//clicked inside the box
+		{
+			//normalize the coordinate so 0,0 is the upper left corner of rect
+			int x = pt.x - rc.left;
+			int y = pt.y - rc.top;
+			int col = x / cellsize;
+			int row = y / cellsize;
+			return col + row * 3;
+
+		}
+		else //user clicked outside box
+		{
+			return -1;
+		}
+	}
+	SetRectEmpty(&rc);
+	//ptinrect
+	
+}
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -154,22 +204,44 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			pminmax->ptMinTrackSize.x = cellsize * 5;
 			pminmax->ptMinTrackSize.y = cellsize * 5;
 		}
+	case WM_LBUTTONDOWN:
+	{
+		int xPos = GET_X_LPARAM(lParam);
+		int yPos = GET_Y_LPARAM(lParam);
+		int index = GetCellNumFromPoint(hWnd, xPos, yPos);		//tell value based on where it is clicked
+		HDC	hdc = GetDC(hWnd);
+		if (NULL != hdc) 
+		{
+			WCHAR txt[100];		//must define in wchar because textout will take in tchar format
+			wsprintf(txt, L"Index = %d", index);
+			TextOut(hdc, xPos, yPos, txt, lstrlen(txt));
+			ReleaseDC(hWnd, hdc);
+		}
+
+	}
+	break;
+
     case WM_PAINT:				//The UI code, where you modify the client size window
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
 			RECT	rc;
-			if (GetClientRect(hWnd, &rc))
+			if (GetGameboardRect(hWnd, &rc))
 			{
-				int width = rc.right - rc.left;
-				int length = rc.bottom - rc.top;
-				int left = (width - cellsize * 3) / 2;
-				int top = (length - cellsize * 3) / 2;
-				int right = left + cellsize * 3;
-				int bottom = top + cellsize * 3;
-				Rectangle(hdc, left, top, right, bottom);
-
+				FillRect(hdc, &rc, (HBRUSH)GetStockObject(WHITE_BRUSH));
+				//Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom);
 			}
+
+			//Draw lines
+			for (int i = 0; i < 4; i++)
+			{
+				//vertical
+				DrawLine(hdc, rc.left+cellsize*i, rc.top, rc.left+cellsize*i, rc.bottom);
+				//horizontal
+				DrawLine(hdc, rc.left, rc.top+cellsize*i, rc.right, rc.top+cellsize*i);
+			}
+
+			
 			EndPaint(hWnd, &ps);
         }
         break;
