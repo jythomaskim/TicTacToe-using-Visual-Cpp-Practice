@@ -245,6 +245,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             // Parse the menu selections:
             switch (wmId)
             {
+			case ID_FILE_NEWGAME:
+			{
+				int yesno = MessageBox(hWnd, L"Are you sure you want to start a new game?", L"New Game", MB_YESNO | MB_ICONQUESTION);
+				if (IDYES == yesno)
+				{
+					playerturn = 1;
+					winner = 0;
+					ZeroMemory(gameboard, sizeof(gameboard));
+					InvalidateRect(hWnd, NULL, TRUE);
+					UpdateWindow(hWnd);
+				}
+			}
+				break;
+				
             case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
