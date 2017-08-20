@@ -107,10 +107,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
+ShowWindow(hWnd, nCmdShow);
+UpdateWindow(hWnd);
 
-   return TRUE;
+return TRUE;
 }
 
 //
@@ -129,6 +129,8 @@ const int cellsize = 100;
 HBRUSH bluebr1, redbr2;
 int playerturn = 1;
 int gameboard[9] = {};
+int winner = 0;
+int wincell[3] = {};
 
 BOOL GetGameboardRect(HWND hwnd, RECT *prect)	//function for obtaining coordinates for centering rectangle
 {
@@ -144,7 +146,7 @@ BOOL GetGameboardRect(HWND hwnd, RECT *prect)	//function for obtaining coordinat
 		return TRUE;
 	}
 	SetRectEmpty(prect);
-	return FALSE; 
+	return FALSE;
 }
 
 void DrawLine(HDC hdc, int x1, int y1, int x2, int y2)		//function to draw line from one coordinate to another
@@ -197,6 +199,33 @@ BOOL GetCellCoord(HWND hwnd, int index, RECT *cell)		//obtain coordinates for th
 	}
 	return FALSE;
 }
+//0,1,2
+//3,4,5
+//6,7,8
+int checkWinner(int gameboard[])
+{
+	int winningCell[] = { 0,1,2,3,4,5,6,7,8,0,3,6,1,4,7,2,5,8,0,4,8,2,4,6 };
+	for (int i = 0; i < ARRAYSIZE(winningCell); i += 3)
+	{
+		if (0 != gameboard[winningCell[i]] && gameboard[winningCell[i]] == gameboard[winningCell[i + 1]]
+			&& gameboard[winningCell[i]] == gameboard[winningCell[i + 2]])
+		{
+			wincell[0] = gameboard[winningCell[i]];
+			wincell[1] = gameboard[winningCell[i + 1]];
+			wincell[2] = gameboard[winningCell[i + 2]];
+			return gameboard[winningCell[i]];
+		}
+	}
+
+	for (int i = 0; i < ARRAYSIZE(winningCell); i++)
+	{
+		if (0 == gameboard[winningCell[i]])		//check if there are any empty cells (zeroes)
+		{
+			return 0;	//continue if there is at least one empty cell
+		}
+	}
+			return 3;	//draw
+}
 
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -237,6 +266,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		int xPos = GET_X_LPARAM(lParam);
 		int yPos = GET_Y_LPARAM(lParam);
+
+		//only handle clicks if its player's turn (if playerturn==0 game ended)
+		if (0 == playerturn)
+			break;
+
 		int index = GetCellNumFromPoint(hWnd, xPos, yPos);		//tell value based on where it is clicked
 		HDC	hdc = GetDC(hWnd);
 		if (NULL != hdc) 
@@ -253,7 +287,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				{
 					gameboard[index] = playerturn;
 					FillRect(hdc, &cell, (playerturn == 1) ? bluebr1 : redbr2);
-					playerturn = (playerturn == 1) ? 2 : 1;
+
+					//check for winner
+					winner = checkWinner(gameboard);
+					if (winner == 1 || winner == 2)
+					{
+						MessageBox(hWnd, (winner == 1) ? L"Player 1 is the winner!" 
+							: L"Player 2 is the Winner!", L"You win!", MB_OK | MB_ICONINFORMATION);
+						playerturn = 0;
+					}
+					else if (3 == winner)
+					{
+						MessageBox(hWnd, L"No one wins!", L"It's a draw!", MB_OK | MB_ICONEXCLAMATION);
+						playerturn = 0;
+					}
+					else if (0 == winner)
+					{
+						playerturn = (playerturn == 1) ? 2 : 1;
+					}
 				}
 			}
 
