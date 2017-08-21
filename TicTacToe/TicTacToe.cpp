@@ -199,9 +199,7 @@ BOOL GetCellCoord(HWND hwnd, int index, RECT *cell)		//obtain coordinates for th
 	}
 	return FALSE;
 }
-//0,1,2
-//3,4,5
-//6,7,8
+
 int checkWinner(int gameboard[])
 {
 	int winningCell[] = { 0,1,2,3,4,5,6,7,8,0,3,6,1,4,7,2,5,8,0,4,8,2,4,6 };
@@ -227,6 +225,38 @@ int checkWinner(int gameboard[])
 			return 3;	//draw
 }
 
+void showTurn(HWND hwnd,HDC hdc)
+{
+	static const WCHAR plr1[] = L"Turn: Player 1";
+	static const WCHAR plr2[] = L"Turn: Player 2";
+	const WCHAR * plrturn = NULL;
+	
+	switch (winner)
+	{
+	case 0:	
+		plrturn = (playerturn == 1) ? plr1 : plr2;
+		break;
+	case 1:
+		plrturn = L"Player 1 Wins!";
+		break;
+	case 2:
+		plrturn = L"Player 2 Wins!";
+		break;
+	case 3:
+		plrturn = L"It's a draw!";
+		break;
+	}
+
+	RECT rc;
+	if (NULL != plrturn && GetClientRect(hwnd, &rc))
+	{
+		rc.top = rc.bottom - 48;
+		FillRect(hdc, &rc, (HBRUSH)GetStockObject(GRAY_BRUSH));
+		SetTextColor(hdc, RGB(255, 255, 255));
+		SetBkMode(hdc, TRANSPARENT);
+		DrawText(hdc, plrturn, lstrlen(plrturn), &rc, DT_CENTER);
+	}
+}
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -318,8 +348,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					else if (0 == winner)
 					{
 						playerturn = (playerturn == 1) ? 2 : 1;
-					}
+					}	
 				}
+				//display player turn
+				showTurn(hWnd, hdc);
 			}
 
 			ReleaseDC(hWnd, hdc);
@@ -336,6 +368,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			RECT	rc;
 			if (GetGameboardRect(hWnd, &rc))
 			{
+				RECT rect;
+
+				if (GetClientRect(hWnd, &rect))
+				{
+					const WCHAR player1[] = L"Player 1";
+					const WCHAR	player2[] = L"Player 2";
+
+					SetBkMode(hdc, TRANSPARENT);
+					//place player 1 and 2 text
+					SetTextColor(hdc, RGB(255, 255, 0));
+					TextOut(hdc, 16, 16, player1, lstrlen(player1));
+					SetTextColor(hdc, RGB(0, 0, 255));
+					TextOut(hdc, rect.right - 72, 16, player2, lstrlen(player2));
+
+					//display player turn
+					showTurn(hWnd, hdc);
+				}
+				
+
 				FillRect(hdc, &rc, (HBRUSH)GetStockObject(WHITE_BRUSH));
 				//Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom);
 			}
