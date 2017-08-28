@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "TicTacToe.h"
 #include "Windowsx.h"
+#include "ctictactoe.h"
 
 #define MAX_LOADSTRING 100
 
@@ -124,139 +125,12 @@ return TRUE;
 //
 //
 
-//Global Variables
-const int cellsize = 100;
-HBRUSH bluebr1, redbr2;
-int playerturn = 1;
-int gameboard[9] = {};
-int winner = 0;
-int wincell[3] = {};
 
-BOOL GetGameboardRect(HWND hwnd, RECT *prect)	//function for obtaining coordinates for centering rectangle
-{
-	RECT	rc;
-	if (GetClientRect(hwnd, &rc))		//obtains the client window size (top left is zero, bottom and right is width/length)
-	{
-		int width = rc.right - rc.left;
-		int length = rc.bottom - rc.top;
-		prect->left = (width - cellsize * 3) / 2;
-		prect->top = (length - cellsize * 3) / 2;
-		prect->right = prect->left + cellsize * 3;
-		prect->bottom = prect->top + cellsize * 3;
-		return TRUE;
-	}
-	SetRectEmpty(prect);
-	return FALSE;
-}
-
-void DrawLine(HDC hdc, int x1, int y1, int x2, int y2)		//function to draw line from one coordinate to another
-{
-	MoveToEx(hdc, x1, y1, NULL);
-	LineTo(hdc, x2, y2);
-}
-
-int GetCellNumFromPoint(HWND hwnd, int x, int y)
-{
-	RECT rc;
-	if (GetGameboardRect(hwnd, &rc))
-	{
-		POINT	pt = { x,y };		//same as pt.x=x and pt.y=y
-		if (PtInRect(&rc, pt))	//clicked inside the box
-		{
-			//normalize the coordinate so 0,0 is the upper left corner of rect
-			int x = pt.x - rc.left;
-			int y = pt.y - rc.top;
-			int col = x / cellsize;
-			int row = y / cellsize;
-			return col + row * 3;
-
-		}
-		else //user clicked outside box
-		{
-			return -1;
-		}
-	}
-	SetRectEmpty(&rc);
-}
-
-BOOL GetCellCoord(HWND hwnd, int index, RECT *cell)		//obtain coordinates for the clicked cell
-{
-	RECT rc;
-	SetRectEmpty(cell);
-	if (index < 0 || index > 8)
-	{
-		return FALSE;
-	}
-	if (GetGameboardRect(hwnd, &rc))
-	{
-		int x = index % 3;	//col
-		int y = index / 3;	//row
-		cell->left = rc.left + cellsize*x + 1;
-		cell->top = rc.top + cellsize*y + 1;
-		cell->right = cell->left + cellsize - 1;
-		cell->bottom = cell->top + cellsize - 1;
-		return TRUE;
-	}
-	return FALSE;
-}
-
-int checkWinner(int gameboard[])
-{
-	int winningCell[] = { 0,1,2,3,4,5,6,7,8,0,3,6,1,4,7,2,5,8,0,4,8,2,4,6 };
-	for (int i = 0; i < ARRAYSIZE(winningCell); i += 3)
-	{
-		if (0 != gameboard[winningCell[i]] && gameboard[winningCell[i]] == gameboard[winningCell[i + 1]]
-			&& gameboard[winningCell[i]] == gameboard[winningCell[i + 2]])
-		{
-			wincell[0] = gameboard[winningCell[i]];
-			wincell[1] = gameboard[winningCell[i + 1]];
-			wincell[2] = gameboard[winningCell[i + 2]];
-			return gameboard[winningCell[i]];
-		}
-	}
-
-	for (int i = 0; i < ARRAYSIZE(winningCell); i++)
-	{
-		if (0 == gameboard[winningCell[i]])		//check if there are any empty cells (zeroes)
-		{
-			return 0;	//continue if there is at least one empty cell
-		}
-	}
-			return 3;	//draw
-}
-
-void showTurn(HWND hwnd,HDC hdc)
-{
-	static const WCHAR plr1[] = L"Turn: Player 1";
-	static const WCHAR plr2[] = L"Turn: Player 2";
-	const WCHAR * plrturn = NULL;
-	
-	switch (winner)
-	{
-	case 0:	
-		plrturn = (playerturn == 1) ? plr1 : plr2;
-		break;
-	case 1:
-		plrturn = L"Player 1 Wins!";
-		break;
-	case 2:
-		plrturn = L"Player 2 Wins!";
-		break;
-	case 3:
-		plrturn = L"It's a draw!";
-		break;
-	}
-
-	RECT rc;
-	if (NULL != plrturn && GetClientRect(hwnd, &rc))
-	{
-		rc.top = rc.bottom - 48;
-		FillRect(hdc, &rc, (HBRUSH)GetStockObject(GRAY_BRUSH));
-		SetTextColor(hdc, RGB(255, 255, 255));
-		SetBkMode(hdc, TRANSPARENT);
-		DrawText(hdc, plrturn, lstrlen(plrturn), &rc, DT_CENTER);
-	}
-}
+ctictactoe ttt;
+HBRUSH bluebr1, redbr2;		//defining color
+HICON hicon1, hicon2;		//defining icons
+int pturn = 0;
+int win = 0;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -266,6 +140,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		bluebr1 = CreateSolidBrush(RGB(0, 0, 255));
 		redbr2 = CreateSolidBrush(RGB(255, 0, 0));
+		hicon1 = LoadIcon(hInst, MAKEINTRESOURCE(IDI_PLAYER1));
+		hicon2 = LoadIcon(hInst, MAKEINTRESOURCE(IDI_PLAYER2));
+
 	}
 	break;
 
@@ -280,9 +157,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				int yesno = MessageBox(hWnd, L"Are you sure you want to start a new game?", L"New Game", MB_YESNO | MB_ICONQUESTION);
 				if (IDYES == yesno)
 				{
-					playerturn = 1;
-					winner = 0;
-					ZeroMemory(gameboard, sizeof(gameboard));
+					pturn = 1;
+					ttt.setPlayerTurn(pturn);
+					win = 0;
+					ttt.setWinner(win);
+					ttt.restartGameboard();
 					InvalidateRect(hWnd, NULL, TRUE);
 					UpdateWindow(hWnd);
 				}
@@ -303,8 +182,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_GETMINMAXINFO:		//setting a minimum size for resizing the window
 		{
 			MINMAXINFO *pminmax = (MINMAXINFO*)lParam;
-			pminmax->ptMinTrackSize.x = cellsize * 5;
-			pminmax->ptMinTrackSize.y = cellsize * 5;
+			pminmax->ptMinTrackSize.x = ttt.getcellsize() * 5;
+			pminmax->ptMinTrackSize.y = ttt.getcellsize() * 5;
 		}
 	case WM_LBUTTONDOWN:
 	{
@@ -312,10 +191,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		int yPos = GET_Y_LPARAM(lParam);
 
 		//only handle clicks if its player's turn (if playerturn==0 game ended)
-		if (0 == playerturn)
+		if (0 == ttt.getPlayerTurn())
 			break;
 
-		int index = GetCellNumFromPoint(hWnd, xPos, yPos);		//tell value based on where it is clicked
+		int index = ttt.GetCellNumFromPoint(hWnd, xPos, yPos);		//tell value based on where it is clicked
 		HDC	hdc = GetDC(hWnd);
 		if (NULL != hdc) 
 		{
@@ -327,31 +206,42 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (-1 != index)
 			{
 				RECT cell;
-				if (0==gameboard[index] && GetCellCoord(hWnd, index, &cell))
+				if (0==ttt.getGameboard(index) && ttt.GetCellCoord(hWnd, index, &cell))
 				{
-					gameboard[index] = playerturn;
-					FillRect(hdc, &cell, (playerturn == 1) ? bluebr1 : redbr2);
+					win = ttt.getPlayerTurn();
+					ttt.setGameboard(index,win);
+					//FillRect(hdc, &cell, (playerturn == 1) ? bluebr1 : redbr2);
+					//DrawIcon(hdc, cell.left, cell.top, (playerturn == 1) ? hicon1 : hicon2);
+					ttt.DrawIconCentered(hdc, &cell, (ttt.getPlayerTurn() == 1) ? hicon1 : hicon2);
 
 					//check for winner
-					winner = checkWinner(gameboard);
-					if (winner == 1 || winner == 2)
+					win = ttt.checkWinner();
+					ttt.setWinner(win);
+					if (ttt.getWinner() == 1 || ttt.getWinner() == 2)
 					{
-						MessageBox(hWnd, (winner == 1) ? L"Player 1 is the winner!" 
+						//highlight the winning line
+						ttt.highlightWinner(hWnd, hdc, bluebr1, redbr2, hicon1, hicon2);
+						
+
+						MessageBox(hWnd, (ttt.getWinner() == 1) ? L"Player 1 is the winner!" 
 							: L"Player 2 is the Winner!", L"You win!", MB_OK | MB_ICONINFORMATION);
-						playerturn = 0;
+						pturn = 0;
+						ttt.setPlayerTurn(pturn);
 					}
-					else if (3 == winner)
+					else if (3 == ttt.getWinner())
 					{
 						MessageBox(hWnd, L"No one wins!", L"It's a draw!", MB_OK | MB_ICONEXCLAMATION);
-						playerturn = 0;
+						pturn = 0;
+						ttt.setPlayerTurn(pturn);
 					}
-					else if (0 == winner)
+					else if (0 == ttt.getWinner())
 					{
-						playerturn = (playerturn == 1) ? 2 : 1;
+						pturn = (ttt.getPlayerTurn() == 1) ? 2 : 1;
+						ttt.setPlayerTurn(pturn);
 					}	
 				}
 				//display player turn
-				showTurn(hWnd, hdc);
+				ttt.showTurn(hWnd, hdc);
 			}
 
 			ReleaseDC(hWnd, hdc);
@@ -366,7 +256,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
 			RECT	rc;
-			if (GetGameboardRect(hWnd, &rc))
+			if (ttt.GetGameboardRect(hWnd, &rc))
 			{
 				RECT rect;
 
@@ -379,11 +269,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					//place player 1 and 2 text
 					SetTextColor(hdc, RGB(255, 255, 0));
 					TextOut(hdc, 16, 16, player1, lstrlen(player1));
+					DrawIcon(hdc, 24, 34, hicon1);
 					SetTextColor(hdc, RGB(0, 0, 255));
 					TextOut(hdc, rect.right - 72, 16, player2, lstrlen(player2));
+					DrawIcon(hdc, rect.right - 64, 34, hicon2);
 
 					//display player turn
-					showTurn(hWnd, hdc);
+					ttt.showTurn(hWnd, hdc);
 				}
 				
 
@@ -395,17 +287,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			for (int i = 0; i < 4; i++)
 			{
 				//vertical
-				DrawLine(hdc, rc.left+cellsize*i, rc.top, rc.left+cellsize*i, rc.bottom);
+				ttt.DrawLine(hdc, rc.left + ttt.getcellsize()*i, rc.top, rc.left + ttt.getcellsize()*i, rc.bottom);
 				//horizontal
-				DrawLine(hdc, rc.left, rc.top+cellsize*i, rc.right, rc.top+cellsize*i);
+				ttt.DrawLine(hdc, rc.left, rc.top + ttt.getcellsize()*i, rc.right, rc.top + ttt.getcellsize()*i);
 			}
 			RECT cell;
 			for (int i = 0; i < 9; i++)
 			{
-				if (0 != gameboard[i] && GetCellCoord(hWnd, i, &cell))
+				if (0 != ttt.getGameboard(i) && ttt.GetCellCoord(hWnd, i, &cell))
 				{
-					FillRect(hdc, &cell, (gameboard[i]==1) ? bluebr1 : redbr2);
+					//FillRect(hdc, &cell, (gameboard[i]==1) ? bluebr1 : redbr2);
+					ttt.DrawIconCentered(hdc, &cell, (ttt.getGameboard(i) == 1) ? hicon1 : hicon2);
+
 				}
+			}
+			
+			//highlight the winning line
+			if (ttt.getWinner() == 1 || ttt.getWinner() == 2)
+			{
+				ttt.highlightWinner(hWnd, hdc, bluebr1, redbr2, hicon1, hicon2);
 			}
 			
 			EndPaint(hWnd, &ps);
@@ -414,6 +314,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
 		DeleteObject(bluebr1);
 		DeleteObject(redbr2);
+		DestroyIcon(hicon1);
+		DestroyIcon(hicon2);
         PostQuitMessage(0);
         break;
     default:
