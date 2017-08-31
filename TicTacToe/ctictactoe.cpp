@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ctictactoe.h"
+#include "wchar.h"
 
 
 ctictactoe::ctictactoe()
@@ -11,15 +12,15 @@ ctictactoe::~ctictactoe()
 {
 }
 
-void ctictactoe::setPlayerTurn(int &pturn)
+void ctictactoe::setPlayerTurn(int pturn)
 {
 	playerturn = pturn;
 }
-void ctictactoe::setGameboard(int cellnum, int &cellval)
+void ctictactoe::setGameboard(int cellnum, int cellval)
 {
 	gameboard[cellnum] = cellval;
 }
-void ctictactoe::setWinner(int &win)
+void ctictactoe::setWinner(int win)
 {
 	winner = win;
 }
@@ -53,6 +54,38 @@ int ctictactoe::getcellsize() const
 {
 	return cellsize;
 }
+
+//scoring
+void ctictactoe::resetScore()
+{
+	score1 = 0;
+	score2 = 0;
+}
+void ctictactoe::incrementScore(int pturn)
+{
+	if (1 == pturn)
+	{
+		score1++;
+	}
+	else if (2 == pturn)
+	{
+		score2++;
+	}
+}
+//int ctictactoe::getScore(int pturn)
+//{
+//	int score{};
+//	if (1 == pturn)
+//	{
+//		score = score1;
+//	}
+//	else if (2 == pturn)
+//	{
+//		score = score2;
+//	}
+//	return score;
+//}
+
 
 BOOL ctictactoe::GetGameboardRect(HWND hwnd, RECT *prect)	//function for obtaining coordinates for centering rectangle
 {
@@ -177,6 +210,31 @@ void ctictactoe::showTurn(HWND hwnd, HDC hdc)
 		SetTextColor(hdc, RGB(255, 255, 255));
 		SetBkMode(hdc, TRANSPARENT);
 		DrawText(hdc, plrturn, lstrlen(plrturn), &rc, DT_CENTER);
+	}
+}
+
+void ctictactoe::displayScore(HWND hwnd, HDC hdc, int pturn) {
+	RECT rc;
+	LOGBRUSH lb;
+	
+	GetObject((HBRUSH)GetStockObject(GRAY_BRUSH), sizeof(LOGBRUSH), &lb);
+
+	if (GetClientRect(hwnd, &rc))
+	{
+		if (1 == pturn)
+		{
+			WCHAR buf[50];
+			_swprintf(buf, _T("Score: %d"), score1);
+			SetBkColor(hdc, lb.lbColor);
+			TextOut(hdc, 16, 70, buf, lstrlen(buf));
+		}
+		else if (2 == pturn)
+		{
+			WCHAR buf[50];
+			_swprintf(buf, _T("Score: %d"), score2);
+			SetBkColor(hdc, lb.lbColor);
+			TextOut(hdc, rc.right - 72, 70, buf, lstrlen(buf));
+		}
 	}
 }
 

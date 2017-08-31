@@ -158,6 +158,7 @@
     <ResourceCompile Include="TicTacToe.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\..\..\..\..\Downloads\Kajdax-The-Lost-Props-Jason-Mask.ico" />
     <Image Include="..\..\..\..\..\Downloads\pumpkin (1).ico" />
     <Image Include="..\..\..\..\..\Downloads\tomato.ico" />
     <Image Include="small.ico" />

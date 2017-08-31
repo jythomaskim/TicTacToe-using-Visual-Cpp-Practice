@@ -5,6 +5,7 @@
 #include "TicTacToe.h"
 #include "Windowsx.h"
 #include "ctictactoe.h"
+#include "wchar.h"
 
 #define MAX_LOADSTRING 100
 
@@ -141,8 +142,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		bluebr1 = CreateSolidBrush(RGB(0, 0, 255));
 		redbr2 = CreateSolidBrush(RGB(255, 0, 0));
 		hicon1 = LoadIcon(hInst, MAKEINTRESOURCE(IDI_PLAYER1));
-		hicon2 = LoadIcon(hInst, MAKEINTRESOURCE(IDI_PLAYER2));
-
+		hicon2 = LoadIcon(hInst, MAKEINTRESOURCE(IDI_PLAYER22));
+		ttt.resetScore();
 	}
 	break;
 
@@ -202,7 +203,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			//wsprintf(txt, L"Index = %d", index);
 			//TextOut(hdc, xPos, yPos, txt, lstrlen(txt));
 			
-			//coloring clicked cell
+			//fill clicked cell with icon
 			if (-1 != index)
 			{
 				RECT cell;
@@ -222,24 +223,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						//highlight the winning line
 						ttt.highlightWinner(hWnd, hdc, bluebr1, redbr2, hicon1, hicon2);
 						
+						//update score
+						ttt.incrementScore(ttt.getWinner());
 
 						MessageBox(hWnd, (ttt.getWinner() == 1) ? L"Player 1 is the winner!" 
 							: L"Player 2 is the Winner!", L"You win!", MB_OK | MB_ICONINFORMATION);
-						pturn = 0;
-						ttt.setPlayerTurn(pturn);
+						ttt.setPlayerTurn(0);
 					}
 					else if (3 == ttt.getWinner())
 					{
 						MessageBox(hWnd, L"No one wins!", L"It's a draw!", MB_OK | MB_ICONEXCLAMATION);
-						pturn = 0;
-						ttt.setPlayerTurn(pturn);
+						ttt.setPlayerTurn(0);
 					}
 					else if (0 == ttt.getWinner())
 					{
-						pturn = (ttt.getPlayerTurn() == 1) ? 2 : 1;
-						ttt.setPlayerTurn(pturn);
+						ttt.setPlayerTurn((ttt.getPlayerTurn() == 1) ? 2 : 1);
 					}	
 				}
+				//player1 score display
+				ttt.displayScore(hWnd, hdc, 1);
+				//player2 score display
+				ttt.displayScore(hWnd, hdc, 2);
+
 				//display player turn
 				ttt.showTurn(hWnd, hdc);
 			}
@@ -266,13 +271,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					const WCHAR	player2[] = L"Player 2";
 
 					SetBkMode(hdc, TRANSPARENT);
-					//place player 1 and 2 text
-					SetTextColor(hdc, RGB(255, 255, 0));
+					//display PLAYER1 text
+					SetTextColor(hdc, RGB(0, 0, 0));
 					TextOut(hdc, 16, 16, player1, lstrlen(player1));
 					DrawIcon(hdc, 24, 34, hicon1);
-					SetTextColor(hdc, RGB(0, 0, 255));
+
+					//player1 score display
+					ttt.displayScore(hWnd,hdc,1);
+					
+					//display PLAYER2 text
+					SetTextColor(hdc, RGB(0, 0, 0));
 					TextOut(hdc, rect.right - 72, 16, player2, lstrlen(player2));
 					DrawIcon(hdc, rect.right - 64, 34, hicon2);
+
+					//player2 score display
+					ttt.displayScore(hWnd,hdc,2);
 
 					//display player turn
 					ttt.showTurn(hWnd, hdc);
